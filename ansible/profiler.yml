@@ -1,0 +1,23 @@
+---
+- name: Run remote profiler
+  hosts: bucket
+  tags: 
+  - run_profiler
+  tasks:
+  - name: Run remote profiler
+    command: sudo taskset -c 12 python3 ~/HDSearch/profiler.py -i {{ ITERATION }}
+    async: 10000 
+    poll: 0
+- name: Kill remote profiler
+  hosts: bucket
+  tags: 
+  - kill_profiler
+  tasks:
+  - name: Get the PID of running process
+    ignore_errors: yes
+    shell: "ps -few | grep profiler | awk '{print $2}'"
+    register: running_processes
+  - name: Kill remote profiler       
+    ignore_errors: yes
+    shell: sudo kill {{ item }}
+    with_items: "{{ running_processes.stdout_lines }}"

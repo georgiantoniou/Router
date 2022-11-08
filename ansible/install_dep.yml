@@ -1,0 +1,6 @@
+---
+- hosts: all
+  tasks:
+  - name: Install Ubuntu 18.04 dependencies
+    include_tasks: install_dep_ubuntu_1804.yml
+    when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '18.04'

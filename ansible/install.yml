@@ -1,0 +1,25 @@
+---
+- name: Install HDSearch
+  hosts: midtier
+  tasks:    
+  - name: Install HDSearch if not exists
+    unarchive: 
+      src: ~/HDSearch.tgz 
+      dest: ~/
+  - name: Set Up Docker Curl
+    command: ~/HDSearch/scripts/set-up-docker.sh
+  - name: Make Space to Commit Image
+    command: ~/HDSearch/scripts/change-storage-location-docker.sh
+
+- name: Execute HDSearch Container 
+  hosts:
+  - midtier
+  #- bucket
+  #- client
+  tags: compose_up_hdsearch
+  tasks:
+    - name: Change to docker group 
+      command: sudo newgrp docker
+    
+    - name: Compose Up HDSearch
+      command: ~/HDSearch/scripts/docker-compose-up.sh

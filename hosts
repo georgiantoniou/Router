@@ -1,0 +1,8 @@
+[client]
+node1
+
+[midtier]
+node1
+
+[bucket]
+node1

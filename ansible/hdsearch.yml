@@ -1,0 +1,113 @@
+---
+- name: Kill bucket server
+  hosts: bucket
+  tags: 
+  - kill_bucket
+  tasks:
+  - name: Kill bucket server       
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -9 bucket_server
+
+- name: Run bucket server
+  hosts: bucket
+  tags: 
+  - run_bucket
+  tasks:
+  - name: Run bucket server
+    command: sudo docker exec {{ CONTAINER_ID }} taskset -c {{ CORES }} /MicroSuite/src/HDSearch/bucket_service/service/bucket_server {{ DATASET }} {{ IP }}:{{ PORT }} {{ MODE }} {{ THREADS }} {{ ID }} {{ NUM_BUCKETS }}
+    async: 10000 
+    poll: 0  
+
+- name: Copy IP file
+  hosts: midtier
+  tags:
+  - copy_ip_file
+  tasks:
+  - name: Copy IP file    
+    ignore_errors: yes
+    shell: sudo docker cp {{ IP_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/HDSearch/mid_tier_service/service/bucket_servers_IP.txt
+
+- name: Copy Midtier
+  hosts: midtier
+  tags:
+  - copy_midtier
+  tasks:
+  - name: Copy Midtier    
+    ignore_errors: yes
+    shell: sudo docker cp {{ MIDTIER_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/HDSearch/mid_tier_service/service/mid_tier_server.cc
+
+- name: Compile Midtier
+  hosts: midtier
+  tags:
+  - compile_midtier
+  tasks:
+  - name: Make Clean Midtier    
+    ignore_errors: yes
+    shell: sudo docker exec -w {{ MIDTIER_FILE_PATH }} {{ CONTAINER_ID }} make clean
+  tasks:
+  - name: Make Midtier
+    ignore_errors: yes
+    shell: sudo docker exec -w {{ MIDTIER_FILE_PATH }} {{ CONTAINER_ID }} make
+
+- name: Copy Client
+  hosts: midtier
+  tags:
+  - copy_client
+  tasks:
+  - name: Copy Client    
+    ignore_errors: yes
+    shell: sudo docker cp {{ CLIENT_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/HDSearch/load_generator/load_generator_open_loop.cc
+
+- name: Compile Client
+  hosts: midtier
+  tags:
+  - compile_client
+  tasks:
+  - name: Make Clean Client    
+    ignore_errors: yes
+    shell: sudo docker exec -w {{ CLIENT_FILE_PATH }} {{ CONTAINER_ID }} make clean
+  tasks:
+  - name: Make Client
+    ignore_errors: yes
+    shell: sudo docker exec -w {{ CLIENT_FILE_PATH }} {{ CONTAINER_ID }} make
+
+
+
+- name: Kill midtier
+  hosts: midtier
+  tags:
+  - kill_midtier
+  tasks:
+  - name: Kill midtier    
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -9 mid_tier_server
+
+- name: Run midtier
+  hosts: midtier
+  tags: 
+  - run_midtier
+  tasks:
+  - name: Run midtier
+    command: sudo docker exec {{ CONTAINER_ID }} taskset -c {{ CORES }} /MicroSuite/src/HDSearch/mid_tier_service/service/mid_tier_server {{ HASH_TABLES }} {{ KEY_LENGTH }} {{ PROBE_LEVEL }} {{ BUCKET_SERVERS }} /MicroSuite/src/HDSearch/mid_tier_service/service/{{ IP_FILE_PATH }} {{ DATASET }} {{ MODE }} {{ IP }}:{{ PORT }} {{ NETWORK_THREADS }} {{ DISPATCH_THREADS }} {{ RESPONSE_THREADS }} {{ STATS }}
+    async: 10000 
+    poll: 0 
+
+- name: Get dataset
+  hosts: 
+  - midtier
+  - bucket
+  tags: 
+  - get_dataset
+  tasks:
+  - name: Check if dataset exist
+    stat:
+      path: ./image_feature_vectors.dat
+    register: dataset_exist_status
+  - name: load dataset
+    command: wget https://akshithasriraman.eecs.umich.edu/dataset/HDSearch/image_feature_vectors.dat 
+    when: not dataset_exist_status.stat.exists
+  - name: move to container
+    command: sudo docker cp ~/image_feature_vectors.dat {{ CONTAINER_ID }}:/home/image_feature_vectors.dat
+    async: 10000 
+    poll: 0 
+    

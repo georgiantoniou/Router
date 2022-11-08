@@ -1,0 +1,10 @@
+---
+- name: Install libraries
+  become: yes
+  apt:
+    update_cache: yes
+    pkg:
+    - docker-compose
+    - gnupg2
+    - pass
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '18.04' 
