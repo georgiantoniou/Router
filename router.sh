@@ -2,7 +2,7 @@
 
 export ANSIBLE_HOST_KEY_CHECKING=False
 
-get_HDSearch () {
+get_Router () {
 
   if [[ ! -d "microsuite/" ]]; then
   
@@ -10,7 +10,7 @@ get_HDSearch () {
    
   fi
 
-  if [[ ! -d "microsuite/HDSearch" ]]; then
+  if [[ ! -d "microsuite/Router" ]]; then
   
     pushd microsuite 
     git clone https://github.com/ucy-xilab/MicroSuite.git
@@ -34,7 +34,7 @@ install_dep () {
 build () {
   #get_HDSearch
   pushd ~
-  tar -czf HDSearch.tgz HDSearch
+  tar -czf Router.tgz Router
   popd
  }	
 
@@ -42,8 +42,7 @@ build_install () {
   install_dep
   build
   ansible-playbook -v -i hosts ansible/install.yml
-  echo "irtaaaaaaaaaa"
-  #ssh node1 "cd ~/HDSearch/microsuite; sudo docker compose up"
+  
 }
 
 "$@"

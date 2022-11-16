@@ -1,25 +1,25 @@
 ---
-- name: Install HDSearch
+- name: Install Router
   hosts: midtier
   tasks:    
-  - name: Install HDSearch if not exists
+  - name: Install Router if not exists
     unarchive: 
-      src: ~/HDSearch.tgz 
+      src: ~/Router.tgz 
       dest: ~/
   - name: Set Up Docker Curl
-    command: ~/HDSearch/scripts/set-up-docker.sh
+    command: ~/Router/scripts/set-up-docker.sh
   - name: Make Space to Commit Image
-    command: ~/HDSearch/scripts/change-storage-location-docker.sh
+    command: ~/Router/scripts/change-storage-location-docker.sh
 
-- name: Execute HDSearch Container 
+- name: Execute Router Container 
   hosts:
   - midtier
   #- bucket
   #- client
-  tags: compose_up_hdsearch
+  tags: compose_up_router
   tasks:
     - name: Change to docker group 
       command: sudo newgrp docker
     
-    - name: Compose Up HDSearch
-      command: ~/HDSearch/scripts/docker-compose-up.sh
+    - name: Compose Up Router
+      command: ~/Router/scripts/docker-compose-up.sh

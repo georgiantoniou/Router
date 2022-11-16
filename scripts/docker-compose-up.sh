@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ~/HDSearch/microsuite
+cd ~/Router/microsuite
 sudo docker compose up &>/dev/null &
 
 sudo docker ps | grep hdsearch
