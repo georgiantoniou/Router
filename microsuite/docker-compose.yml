@@ -1,7 +1,7 @@
 version: "3"
 services:
     hdsearch:
-      image: mklean/baseline-microsuite:hdsearch_router_setalgebra
+      image: mklean/baseline-microsuite:hdsearch_router
       stdin_open: true # docker run -i
       tty: true        # docker run -t
       ports:
@@ -12,3 +12,7 @@ services:
           - "50054:50054"
           - "50055:50055"
           - "11211:11211"
+          - "11212:11212"
+          - "11213:11213"
+          - "11214:11214"
+          

@@ -1,0 +1,47 @@
+---
+- name: Kill Memcached
+  hosts: bucket
+  tags: 
+  - kill_memcached
+  tasks:
+  - name: Kill memcached       
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -f memcached
+
+- name: Create Memcached Configuration
+  hosts: bucket
+  tags: 
+  - add_mem_conf
+  tasks:
+  - name: Create Memcached Configuration       
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} touch /etc/{{ MEM_CONF_NAME }}
+
+- name: Set Memcached Port
+  hosts: bucket
+  tags: 
+  - set_mem_port
+  tasks:
+  - name: Set Memcached Port       
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} sed 's/11211/{{ PORT_NUMBER }}' /etc/{{ MEM_CONF_NAME }}
+
+- name: Remove Memcached Service Conf
+  hosts: bucket
+  tags: 
+  - rm_mem_serv_conf
+  tasks:
+  - name: Remove Memcached Service Conf    
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} rm {{ MEM_CONF_NAME }}
+
+- name: Restart Memcached Service
+  hosts: bucket
+  tags: 
+  - restart_mem
+  tasks:
+  - name: Restart Memcached Service   
+    ignore_errors: yes
+    shell: sudo docker exec {{ CONTAINER_ID }} service memcached restart
+
+

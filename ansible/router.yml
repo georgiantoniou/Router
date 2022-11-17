@@ -6,7 +6,7 @@
   tasks:
   - name: Kill bucket server       
     ignore_errors: yes
-    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -9 bucket_server
+    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -f lookup_server
 
 - name: Run bucket server
   hosts: bucket
@@ -14,7 +14,7 @@
   - run_bucket
   tasks:
   - name: Run bucket server
-    command: sudo docker exec {{ CONTAINER_ID }} taskset -c {{ CORES }} /MicroSuite/src/HDSearch/bucket_service/service/bucket_server {{ DATASET }} {{ IP }}:{{ PORT }} {{ MODE }} {{ THREADS }} {{ ID }} {{ NUM_BUCKETS }}
+    command: sudo docker exec {{ CONTAINER_ID }} taskset -c {{ CORES }} /MicroSuite/src/Router/lookup_service/service/lookup_server {{ IP }}:{{ PORT }} {{ MEMCACHED_PORT }} {{ THREADS }} {{ ID }}
     async: 10000 
     poll: 0  
 
@@ -25,7 +25,7 @@
   tasks:
   - name: Copy IP file    
     ignore_errors: yes
-    shell: sudo docker cp {{ IP_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/HDSearch/mid_tier_service/service/bucket_servers_IP.txt
+    shell: sudo docker cp {{ IP_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/Router/mid_tier_service/service/lookup_servers_IP.txt
 
 - name: Copy Midtier
   hosts: midtier
@@ -56,7 +56,7 @@
   tasks:
   - name: Copy Client    
     ignore_errors: yes
-    shell: sudo docker cp {{ CLIENT_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/HDSearch/load_generator/load_generator_open_loop.cc
+    shell: sudo docker cp {{ CLIENT_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/Router/load_generator/load_generator_open_loop.cc
 
 - name: Compile Client
   hosts: midtier
@@ -80,7 +80,7 @@
   tasks:
   - name: Kill midtier    
     ignore_errors: yes
-    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -9 mid_tier_server
+    shell: sudo docker exec {{ CONTAINER_ID }} sudo pkill -f mid_tier_server
 
 - name: Run midtier
   hosts: midtier
@@ -88,7 +88,7 @@
   - run_midtier
   tasks:
   - name: Run midtier
-    command: sudo docker exec {{ CONTAINER_ID }} taskset -c {{ CORES }} /MicroSuite/src/HDSearch/mid_tier_service/service/mid_tier_server {{ HASH_TABLES }} {{ KEY_LENGTH }} {{ PROBE_LEVEL }} {{ BUCKET_SERVERS }} /MicroSuite/src/HDSearch/mid_tier_service/service/{{ IP_FILE_PATH }} {{ DATASET }} {{ MODE }} {{ IP }}:{{ PORT }} {{ NETWORK_THREADS }} {{ DISPATCH_THREADS }} {{ RESPONSE_THREADS }} {{ STATS }}
+    command: sudo docker exec {{ CONTAINER_ID }} taskset -c {{ CORES }} /MicroSuite/src/Router/mid_tier_service/service/mid_tier_server {{ BUCKET_SERVERS }} /MicroSuite/src/Router/mid_tier_service/service/{{ IP_FILE_PATH }} {{ IP }}:{{ PORT }} {{ NETWORK_THREADS }} {{ DISPATCH_THREADS }} {{ RESPONSE_THREADS }} {{ REPLICAS }}
     async: 10000 
     poll: 0 
 
