@@ -1,7 +1,7 @@
 ---
 - name: Set uncore frequency
   become: yes
-  hosts: memcached
+  hosts: bucket
   tasks:
   - name: Load msr kernel module    
     shell: modprobe msr

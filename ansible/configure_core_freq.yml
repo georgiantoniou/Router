@@ -1,7 +1,7 @@
 ---
 - name: Set core frequency
   become: yes
-  hosts: memcached
+  hosts: bucket
   tasks:
   - name: Set userspace governor 
     shell: LD_LIBRARY_PATH=/mydata/linux-4.15.18 /mydata/linux-4.15.18/cpupower frequency-set -g userspace

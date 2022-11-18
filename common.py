@@ -7,5 +7,5 @@ class Configuration:
         l = []
         if hasattr(self, 'hdsearch_freq'):
             l.append("freq={}".format(self.hdsearch_freq))
-        l.append("qps={}".format(self.hdsearch_qps))
+        l.append("qps={}".format(self.router_qps))
         return '-'.join(l)

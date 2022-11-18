@@ -155,23 +155,23 @@ def move_ip_file(path, container_id):
 def cp_midtier(container_id):
     extravars = [
         'CONTAINER_ID={}'.format(container_id),
-        'MIDTIER_FILE_PATH={}'.format('/users/ganton12/HDSearch/microsuite/MicroSuite/src/HDSearch/mid_tier_service/service/mid_tier_server.cc')
+        'MIDTIER_FILE_PATH={}'.format(filename)
     ]
     run_ansible_playbook(
             inventory='hosts', 
             extravars=extravars, 
-            playbook='ansible/hdsearch.yml', 
+            playbook='ansible/router.yml', 
             tags='copy_midtier')
 
 def compile_midtier(container_id):
     extravars = [
         'CONTAINER_ID={}'.format(container_id),
-        'MIDTIER_FILE_PATH={}'.format('/MicroSuite/src/HDSearch/mid_tier_service/service')
+        'MIDTIER_FILE_PATH={}'.format('/MicroSuite/src/Router/mid_tier_service/service')
     ]
     run_ansible_playbook(
             inventory='hosts', 
             extravars=extravars, 
-            playbook='ansible/hdsearch.yml', 
+            playbook='ansible/router.yml', 
             tags='compile_midtier')    
 
 def cp_client(container_id, filename):
@@ -196,10 +196,10 @@ def compile_client(container_id):
             playbook='ansible/router.yml', 
             tags='compile_client')    
 
-def fix_mem_conf(container_id, memcached-conf):
+def fix_mem_conf(container_id, memcached_conf):
     
     for i in range(memcached_conf.number):
-        conf_name = "memcached_server" + str(i) + ".conf"
+        conf_name = "memcached_server" + str(i+1) + ".conf"
         extravars = [
             'CONTAINER_ID={}'.format(container_id),
             'MEM_CONF_NAME={}'.format(conf_name)
@@ -226,33 +226,33 @@ def rm_mem_conf(container_id):
             'CONTAINER_ID={}'.format(container_id),
             'MEM_CONF_NAME={}'.format('/lib/systemd/system/memcached.service')
         ]
-        run_ansible_playbook(
-                inventory='hosts', 
-                extravars=extravars, 
-                playbook='ansible/memcached.yml', 
-                tags='rm_mem_serv_conf')
+    run_ansible_playbook(
+            inventory='hosts', 
+            extravars=extravars, 
+            playbook='ansible/memcached.yml', 
+            tags='rm_mem_serv_conf')
     
     extravars = [
             'CONTAINER_ID={}'.format(container_id),
             'MEM_CONF_NAME={}'.format('/etc/memcached.conf')
         ]
-        run_ansible_playbook(
-                inventory='hosts', 
-                extravars=extravars, 
-                playbook='ansible/memcached.yml', 
-                tags='rm_mem_serv_conf')
+    run_ansible_playbook(
+            inventory='hosts', 
+            extravars=extravars, 
+            playbook='ansible/memcached.yml', 
+            tags='rm_mem_serv_conf')
 
 def start_mem(container_id):
-     extravars = [
+    extravars = [
             'CONTAINER_ID={}'.format(container_id)
         ]
-        run_ansible_playbook(
-                inventory='hosts', 
-                extravars=extravars, 
-                playbook='ansible/memcached.yml', 
-                tags='restart_mem')
+    run_ansible_playbook(
+            inventory='hosts', 
+            extravars=extravars, 
+            playbook='ansible/memcached.yml', 
+            tags='restart_mem')
 
-def run_memcached(container_id, memcached-conf):
+def run_memcached(container_id, memcached_conf):
     #fix configuration of memcached
     fix_mem_conf(container_id, memcached_conf)
 
@@ -262,9 +262,9 @@ def run_memcached(container_id, memcached-conf):
     #start memcached service
     start_mem(container_id)
 
-def fix_midtier(container_id):
+def fix_midtier(container_id, filename):
     #copy midtier file to container
-    cp_midtier(container_id)
+    cp_midtier(container_id, filename)
 
     #compile midtier file
     compile_midtier(container_id)
@@ -277,7 +277,7 @@ def fix_client(container_id, filename):
     compile_client(container_id)
     
 def create_dataset():
-
+    
     sshProcess = subprocess.Popen(['ssh',
                                '-tt',
                                'node1'],
@@ -294,7 +294,17 @@ def create_dataset():
             container_id=line.split(" ")[0]
             break
 
-    os.system('ssh node1 "sudo docker exec {}  head -1000000 /home/twitter_requests_data_set.dat &> /home/twitter_requests_data_set_warmup"'.format(container_id))
+    sshProcess = subprocess.Popen(['ssh',
+                               '-tt',
+                               'node1'],
+                               stdin=subprocess.PIPE, 
+                               stdout = subprocess.PIPE,
+                               universal_newlines=True,
+                               bufsize=0)
+    sshProcess.stdin.write("sudo docker exec {} bash -c 'head -1000000 /home/twitter_requests_data_set.dat &> /home/twitter_requests_data_set_warmup' \n".format(container_id))
+    time.sleep(5)
+    sshProcess.stdin.write("logout \n")
+    sshProcess.stdin.close()
 
 def kill_memcached():
     sshProcess = subprocess.Popen(['ssh',
@@ -375,7 +385,7 @@ def configure_router_node(conf):
             logging.info('Waiting for remote host {}...'.format(node))
             time.sleep(30)
             pass
-        os.system('ssh -n {} "cd ~/HDSearch; sudo python3 configure.py -v --turbo={} --kernelconfig={} -v"'.format(node, conf['turbo'], conf['kernelconfig']))
+        os.system('ssh -n {} "cd ~/Router; sudo python3 configure.py -v --turbo={} --kernelconfig={} -v"'.format(node, conf['turbo'], conf['kernelconfig']))
         if conf['ht'] == False:
         	os.system('ssh -n {} "echo "forceoff" | sudo tee /sys/devices/system/cpu/smt/control"'.format(node))
         os.system('ssh -n {} "sudo cpupower frequency-set -g performance"'.format(node))
@@ -415,6 +425,7 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
 
 
     # prepare client and start memcached processe for warmup
+    fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server_warmup.cc')
     fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_warmup.cc')
     run_memcached(container_id, memcached_conf)
 
@@ -423,9 +434,22 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
     run_remote(midtier_conf, bucket_conf, memcached_conf,warmup)
     os.system('ssh node1 "sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> ./results_out"'.format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.warmup_time,client_conf.warmup_qps,client_conf.IP,client_conf.port,client_conf.warmup_get_ratio,client_conf.warmup_set_ratio))
     
+     sshProcess = subprocess.Popen(['ssh',
+                               '-tt',
+                               'node1'],
+                               stdin=subprocess.PIPE, 
+                               stdout = subprocess.PIPE,
+                               universal_newlines=True,
+                               bufsize=0)
+    sshProcess.stdin.write("sudo docker ps \n")
+    time.sleep(5)
+    sshProcess.stdin.write("logout \n")
+    sshProcess.stdin.close()
+
+
     # kill remote
     kill_remote()
-    fix_midtier(container_id)
+    fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server.cc')
     fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_run.cc')
 
     #actual run 
@@ -463,7 +487,7 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
     
 
 def run_multiple_experiments(root_results_dir, batch_name, system_conf, client_conf, midtier_conf, bucket_conf, memcached_conf, iter):
-    configure_router_node(system_conf)
+    #configure_router_node(system_conf)
     #start container
     start_remote()
     create_dataset()
@@ -478,7 +502,7 @@ def run_multiple_experiments(root_results_dir, batch_name, system_conf, client_c
     exit()
     for qps in request_qps:
         instance_conf = copy.copy(client_conf)
-        client_conf.set(router_qps', qps)
+        client_conf.set('router_qps', qps)
         #same work experiment
         #time=int(int(instance_conf.mcperf_time)*min(request_qps)/qps)
         #instance_conf.set('mcperf_time',time)
@@ -508,14 +532,15 @@ def main(argv):
         'port': '50054',
         'warmup_get_ratio': '0',
         'run_get_ratio': '60',
-        'wamup_set_ratio': '1000000',
+        'warmup_set_ratio': '1000000',
         'run_set_ratio': '60',
-        'cores': '1'
+        'cores': '1',
+        'router_qps': 1
     })
 
     midtier_conf = common.Configuration({
         'bucket_servers': '4',
-        'ip_file_path': 'bucket_servers_IP.txt',
+        'ip_file_path': 'lookup_servers_IP.txt',
         'IP': '0.0.0.0',
         'port': '50054',
         'network_threads': '1',
@@ -528,7 +553,7 @@ def main(argv):
     bucket_conf = common.Configuration({
         'IP': ['0.0.0.0'],
         'port': ['50050', '50051', '50052', '50053'],
-        'threads': ['4','1']
+        'threads': ['4','1'],
         'bucket_id': ['0', '1', '2', '3'],
         'cores': ['3', '4', '5', '6'],
         'perf_counters': '54'
