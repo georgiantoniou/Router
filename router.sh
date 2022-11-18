@@ -32,7 +32,7 @@ install_dep () {
 }
 
 build () {
-  #get_HDSearch
+  get_Router
   pushd ~
   tar -czf Router.tgz Router
   popd
