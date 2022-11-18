@@ -15,7 +15,7 @@
   tasks:
   - name: Create Memcached Configuration       
     ignore_errors: yes
-    shell: sudo docker exec {{ CONTAINER_ID }} touch /etc/{{ MEM_CONF_NAME }}
+    shell: sudo docker exec {{ CONTAINER_ID }} cp /etc/memcached.conf /etc/{{ MEM_CONF_NAME }}
 
 - name: Set Memcached Port
   hosts: bucket
@@ -24,15 +24,15 @@
   tasks:
   - name: Set Memcached Port       
     ignore_errors: yes
-    shell: sudo docker exec {{ CONTAINER_ID }} sed 's/11211/{{ PORT_NUMBER }}' /etc/{{ MEM_CONF_NAME }}
+    shell: sudo docker exec {{ CONTAINER_ID }} sed 's/11211/{{ PORT_NUMBER }}/' /etc/{{ MEM_CONF_NAME }}
     register: shell_output
   - name: Save conf to a file 
     copy:
-      content: {{ shell_output.stdout }}
+      content: "{{ shell_output.stdout }}"
       dest: "~/temp.txt"
   - name: Save conf to image
     ignore_errors: yes
-    shell: sudo docker cp {{ CLIENT_FILE_PATH }} {{ CONTAINER_ID }}:/etc/{{ MEM_CONF_NAME }}
+    shell: sudo docker cp ~/temp.txt {{ CONTAINER_ID }}:/etc/{{ MEM_CONF_NAME }}
 
 
 - name: Remove Memcached Service Conf
@@ -43,6 +43,7 @@
   - name: Remove Memcached Service Conf    
     ignore_errors: yes
     shell: sudo docker exec {{ CONTAINER_ID }} rm {{ MEM_CONF_NAME }}
+
 
 - name: Restart Memcached Service
   hosts: bucket

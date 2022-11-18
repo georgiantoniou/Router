@@ -90,7 +90,7 @@ class PerfEventProfiling(EventProfiling):
          #   self.timeseries[e] = []
         
         #get pid of bucket server
-        self.pid = os.popen("ps aux | grep lookup_server | grep -v docker | awk '{print $2}' | head -1").read().strip().split(" ")[0]
+        self.pid = os.popen("ps aux | grep mid_tier_server | grep -v docker | awk '{print $2}' | head -1").read().strip().split(" ")[0]
         print(str(self.pid))
 
     def find_perf_path(self):

@@ -152,7 +152,7 @@ def move_ip_file(path, container_id):
             playbook='ansible/router.yml', 
             tags='copy_ip_file')    
 
-def cp_midtier(container_id):
+def cp_midtier(container_id, filename):
     extravars = [
         'CONTAINER_ID={}'.format(container_id),
         'MIDTIER_FILE_PATH={}'.format(filename)
@@ -421,34 +421,36 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
     kill_profiler()
     kill_memcached()
     kill_remote()
-    time.sleep(15)
+    #time.sleep(15)
 
 
     # prepare client and start memcached processe for warmup
     fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server_warmup.cc')
     fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_warmup.cc')
     run_memcached(container_id, memcached_conf)
-
+    
     # run the warmup i.e initialize memcached
     warmup=0
     run_remote(midtier_conf, bucket_conf, memcached_conf,warmup)
-    os.system('ssh node1 "sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> ./results_out"'.format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.warmup_time,client_conf.warmup_qps,client_conf.IP,client_conf.port,client_conf.warmup_get_ratio,client_conf.warmup_set_ratio))
+   
+    #os.system('ssh node1 "sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> ./results_out"'.format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.warmup_time,client_conf.warmup_qps,client_conf.IP,client_conf.port,client_conf.warmup_get_ratio,client_conf.warmup_set_ratio))
     
-     sshProcess = subprocess.Popen(['ssh',
+    sshProcess = subprocess.Popen(['ssh',
                                '-tt',
                                'node1'],
                                stdin=subprocess.PIPE, 
                                stdout = subprocess.PIPE,
                                universal_newlines=True,
                                bufsize=0)
-    sshProcess.stdin.write("sudo docker ps \n")
-    time.sleep(5)
+    sshProcess.stdin.write("sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} \n".format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.warmup_time,client_conf.warmup_qps,client_conf.IP,client_conf.port,client_conf.warmup_get_ratio,client_conf.warmup_set_ratio))
+    time.sleep(550)
     sshProcess.stdin.write("logout \n")
     sshProcess.stdin.close()
 
-
+    
     # kill remote
     kill_remote()
+    exit()
     fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server.cc')
     fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_run.cc')
 
@@ -461,9 +463,8 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
     time.sleep(120)
    
     exec_command("python3 ./profiler.py -n node1 start")
-    os.system('ssh node1 "sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> ./results_out"'.format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.run_time,client_conf.run_qps,client_conf.IP,client_conf.port,client_conf.run_get_ratio,client_conf.run_set_ratio))
-    exec_command("python3 ./profiler.py -n node1 stop")
-    exec_command("python3 ./profiler.py -n node1 report -d {}".format(router_results_dir_path))
+    #os.system('ssh node1 "sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> ./results_out"'.format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.run_time,client_conf.run_qps,client_conf.IP,client_conf.port,client_conf.run_get_ratio,client_conf.run_set_ratio))
+    
     sshProcess = subprocess.Popen(['ssh',
                                '-tt',
                                'node1'],
@@ -471,16 +472,28 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
                                stdout = subprocess.PIPE,
                                universal_newlines=True,
                                bufsize=0)
-    sshProcess.stdin.write("cat /users/ganton12/results_out \n")
+    sshProcess.stdin.write("sudo docker exec {} bash -c 'taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> /home/results_out' \n".format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.run_time,client_conf.run_qps,client_conf.IP,client_conf.port,client_conf.run_get_ratio,client_conf.run_set_ratio))
     sshProcess.stdin.write("logout \n")
     sshProcess.stdin.close()
-
+    time.sleep(140)
+    exec_command("python3 ./profiler.py -n node1 stop")
+    exec_command("python3 ./profiler.py -n node1 report -d {}".format(router_results_dir_path))
+    #sshProcess = subprocess.Popen(['ssh',
+    #                           '-tt',
+    #                           'node1'],
+    #                           stdin=subprocess.PIPE, 
+    #                           stdout = subprocess.PIPE,
+    #                           universal_newlines=True,
+    #                           bufsize=0)
+    #sshProcess.stdin.write("cat /users/ganton12/results_out \n")
+    #sshProcess.stdin.write("logout \n")
+    #sshProcess.stdin.close()
 
     client_results_path_name = os.path.join(results_dir_path, 'router_client')
     with open(client_results_path_name, 'w') as fo:
         for l in sshProcess.stdout:
             fo.write(l+'\n')
-
+    
     # cleanup
     kill_remote()
     kill_profiler()
@@ -493,13 +506,13 @@ def run_multiple_experiments(root_results_dir, batch_name, system_conf, client_c
     create_dataset()
 
     
-    time.sleep(500)
+    #time.sleep(500)
 
     name_prefix = "turbo={}-kernelconfig={}-hyperthreading={}-".format(system_conf['turbo'], system_conf['kernelconfig'],system_conf['ht'])
     request_qps = [1]
     root_results_dir = os.path.join(root_results_dir, batch_name)
     set_uncore_freq(system_conf, 2000)
-    exit()
+   
     for qps in request_qps:
         instance_conf = copy.copy(client_conf)
         client_conf.set('router_qps', qps)
@@ -535,7 +548,7 @@ def main(argv):
         'warmup_set_ratio': '1000000',
         'run_set_ratio': '60',
         'cores': '1',
-        'router_qps': 1
+        'router_qps': '1'
     })
 
     midtier_conf = common.Configuration({

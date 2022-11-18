@@ -34,7 +34,7 @@
   tasks:
   - name: Copy Midtier    
     ignore_errors: yes
-    shell: sudo docker cp {{ MIDTIER_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/HDSearch/mid_tier_service/service/mid_tier_server.cc
+    shell: sudo docker cp {{ MIDTIER_FILE_PATH }} {{ CONTAINER_ID }}:/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server.cc
 
 - name: Compile Midtier
   hosts: midtier
