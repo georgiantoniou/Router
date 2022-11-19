@@ -184,6 +184,17 @@ def cp_client(container_id, filename):
             extravars=extravars, 
             playbook='ansible/router.yml', 
             tags='copy_client')
+def copy_file(container_id, source, destination):
+    extravars = [
+        'CONTAINER_ID={}'.format(container_id),
+        'SOURCE_FILE_PATH={}'.format(source),
+        'DESTINATION_FILE_PATH={}'.format(destination)
+    ]
+    run_ansible_playbook(
+            inventory='hosts', 
+            extravars=extravars, 
+            playbook='ansible/router.yml', 
+            tags='copy_file')
 
 def compile_client(container_id):
     extravars = [
@@ -396,7 +407,7 @@ def configure_router_node(conf):
         if conf['turbo'] == False:
         	os.system('ssh -n {} "~/Router/turbo-boost.sh disable"'.format(node))
 
-def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_conf, bucket_conf, memcached_conf, idx):
+def run_single_experiment(system_conf, root_results_dir, name_prefix, client_conf, midtier_conf, bucket_conf, memcached_conf, idx):
     name = name_prefix + client_conf.shortname()
     results_dir_name = "{}-{}".format(name, idx)
     results_dir_path = os.path.join(root_results_dir, results_dir_name)
@@ -425,8 +436,11 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
 
 
     # prepare client and start memcached processe for warmup
-    fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server_warmup.cc')
+    fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server.cc')
     fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_warmup.cc')
+    copy_file(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.cc','/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.cc')
+    copy_file(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.h','/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.h')
+    compile_client(container_id)
     run_memcached(container_id, memcached_conf)
     
     # run the warmup i.e initialize memcached
@@ -443,16 +457,33 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
                                universal_newlines=True,
                                bufsize=0)
     sshProcess.stdin.write("sudo docker exec {} taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} \n".format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.warmup_time,client_conf.warmup_qps,client_conf.IP,client_conf.port,client_conf.warmup_get_ratio,client_conf.warmup_set_ratio))
-    time.sleep(550)
+    time.sleep(600)
     sshProcess.stdin.write("logout \n")
     sshProcess.stdin.close()
 
+    client_results_path_name = os.path.join(results_dir_path, 'router_warmup')
+    with open(client_results_path_name, 'w') as fo:
+        for l in sshProcess.stdout:
+            fo.write(l+'\n')
     
+   
     # kill remote
     kill_remote()
-    exit()
-    fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server.cc')
-    fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_run.cc')
+       
+    if system_conf['kernelconfig'] == "baseline":
+        fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server_c6.cc')
+        fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop_c6.cc')
+        copy_file(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper_c6.cc','/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.cc')
+        copy_file(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper_c6.h','/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.h')
+        compile_client(container_id)
+        compile_midtier(container_id)
+    else:
+        fix_midtier(container_id,'/users/ganton12/Router/microsuite/MicroSuite/src/Router/mid_tier_service/service/mid_tier_server.cc')
+        fix_client(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/load_generator_open_loop.cc')
+        copy_file(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.cc','/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.cc')
+        copy_file(container_id,'~/Router/microsuite/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.h','/MicroSuite/src/Router/load_generator/helper_files/loadgen_router_client_helper.h')
+        compile_client(container_id)
+        compile_midtier(container_id)
 
     #actual run 
     warmup=1
@@ -472,7 +503,7 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
                                stdout = subprocess.PIPE,
                                universal_newlines=True,
                                bufsize=0)
-    sshProcess.stdin.write("sudo docker exec {} bash -c 'taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} &> /home/results_out' \n".format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.run_time,client_conf.run_qps,client_conf.IP,client_conf.port,client_conf.run_get_ratio,client_conf.run_set_ratio))
+    sshProcess.stdin.write("sudo docker exec {} bash -c 'taskset -c {} /MicroSuite/src/Router/load_generator/load_generator_open_loop {} {} {} {} {}:{} {} {} {}' \n".format(container_id,client_conf.cores,client_conf.dataset_filepath,client_conf.result_filepath,client_conf.run_time,client_conf.run_qps,client_conf.IP,client_conf.port,client_conf.run_get_ratio,client_conf.run_set_ratio,client_conf.cpu))
     sshProcess.stdin.write("logout \n")
     sshProcess.stdin.close()
     time.sleep(140)
@@ -500,13 +531,12 @@ def run_single_experiment(root_results_dir, name_prefix, client_conf, midtier_co
     
 
 def run_multiple_experiments(root_results_dir, batch_name, system_conf, client_conf, midtier_conf, bucket_conf, memcached_conf, iter):
-    #configure_router_node(system_conf)
+    configure_router_node(system_conf)
     #start container
     start_remote()
     create_dataset()
 
-    
-    #time.sleep(500)
+    time.sleep(500)
 
     name_prefix = "turbo={}-kernelconfig={}-hyperthreading={}-".format(system_conf['turbo'], system_conf['kernelconfig'],system_conf['ht'])
     request_qps = [1]
@@ -522,20 +552,20 @@ def run_multiple_experiments(root_results_dir, batch_name, system_conf, client_c
         temp_iter=iter
         iters_cycle=math.ceil(float(bucket_conf.perf_counters)/4.0)
         for it in range(iters_cycle*(iter),iters_cycle*(iter+1)):
-            run_single_experiment(root_results_dir, name_prefix, instance_conf, midtier_conf, bucket_conf, memcached_conf, it)
+            run_single_experiment(system_conf,root_results_dir, name_prefix, instance_conf, midtier_conf, bucket_conf, memcached_conf, it)
             time.sleep(120)
 
 def main(argv):
     system_confs = [
 
           {'turbo': False, 'kernelconfig': 'baseline', 'ht': False},
-          {'turbo': False, 'kernelconfig': 'disable_c6', 'ht': False},
-          {'turbo': False, 'kernelconfig': 'disable_c1e_c6', 'ht': False},
+          #{'turbo': False, 'kernelconfig': 'disable_c6', 'ht': False},
+          #{'turbo': False, 'kernelconfig': 'disable_c1e_c6', 'ht': False},
           {'turbo': False, 'kernelconfig': 'disable_cstates', 'ht': False},
 
     ]
     client_conf = common.Configuration({
-        'dataset_filepath': '/home/twitter_requests_data_set.dat',
+        'dataset_filepath': '/home/twitter_requests_data_set_warmup',
         'result_filepath': './results',
         'warmup_time': '500',
         'run_time': '120',
@@ -548,7 +578,8 @@ def main(argv):
         'warmup_set_ratio': '1000000',
         'run_set_ratio': '60',
         'cores': '1',
-        'router_qps': '1'
+        'router_qps': '1',
+        'cpu': '3'
     })
 
     midtier_conf = common.Configuration({
@@ -559,8 +590,8 @@ def main(argv):
         'network_threads': '1',
         'dispatch_threads': ['4', '1'],
         'response_threads': ['4', '1'],
-        'replicas': 3,
-        'cores': '2'    #'2'
+        'replicas': '3',
+        'cores': '3'    #'2'
     })
 
     bucket_conf = common.Configuration({
@@ -568,7 +599,7 @@ def main(argv):
         'port': ['50050', '50051', '50052', '50053'],
         'threads': ['4','1'],
         'bucket_id': ['0', '1', '2', '3'],
-        'cores': ['3', '4', '5', '6'],
+        'cores': ['2', '4', '5', '6'],
         'perf_counters': '54'
     })
 

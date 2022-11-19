@@ -110,4 +110,12 @@
     command: sudo docker cp ~/image_feature_vectors.dat {{ CONTAINER_ID }}:/home/image_feature_vectors.dat
     async: 10000 
     poll: 0 
-    
+
+  - name: Copy file
+  hosts: midtier
+  tags:
+  - copy_file
+  tasks:
+  - name: Copy File    
+    ignore_errors: yes
+    shell: sudo docker cp {{ SOURCE_FILE_PATH }} {{ CONTAINER_ID }}:{{ DESTINATION_FILE_PATH }} 
