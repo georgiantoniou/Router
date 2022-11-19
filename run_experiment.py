@@ -461,6 +461,7 @@ def run_single_experiment(system_conf, root_results_dir, name_prefix, client_con
     sshProcess.stdin.write("logout \n")
     sshProcess.stdin.close()
 
+    os.mkdir(results_dir_path)
     client_results_path_name = os.path.join(results_dir_path, 'router_warmup')
     with open(client_results_path_name, 'w') as fo:
         for l in sshProcess.stdout:
