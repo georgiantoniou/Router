@@ -252,7 +252,11 @@ class RouterServiceClient {
 
             // Spawn reader thread that loops indefinitely
             std::thread thread_ = std::thread(&RouterServiceClient::AsyncCompleteRpc, &router_client);
-            uint64_t query_id = rand() % queries.size();
+            
+            // Resize Queries to 1000000 to match Memcached Initialization
+            queries.erase(queries.begin() + 1000000, queries.end());
+           
+            uint64_t query_id = 0;
             std::string key = std::get<0>(queries[query_id]);
             std::string value = std::get<1>(queries[query_id]);
             int operation = 2;
@@ -288,7 +292,7 @@ class RouterServiceClient {
                             false);  
                 }
                 next_time = distributionwarmup(generator) + curr_time;
-                query_id = rand() % queries.size();
+                query_id = query_id + 1;
                 key = std::get<0>(queries[query_id]);
                 value = std::get<1>(queries[query_id]);
                 
