@@ -393,7 +393,7 @@ class RouterServiceClient {
                     }
                 }
                
-                if (responses_recvd->AtomicallyReadCount() % 50000 == 0){
+                if (responses_recvd->AtomicallyReadCount() % 50000 == 0 && responses_recvd->AtomicallyReadCount() != 0){
                   std::cout << "Responses: " << responses_recvd->AtomicallyReadCount() << "\n";
                 }
                 curr_time = (double)GetTimeInMicro();
