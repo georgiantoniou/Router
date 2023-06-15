@@ -329,8 +329,10 @@ class RouterServiceClient {
                 set_cnt = (set_cnt + 1) % (set_ratio + 1);
             }
             center = 1000000.0/(double)(qps);
+            curr_time = (double)GetTimeInMicro();
+            std::default_random_engine generator_run;
             std::poisson_distribution<int> distribution(center);
-            next_time = distribution(generator) + curr_time;
+            next_time = distribution(generator_run) + curr_time;
             overall_queries = qps*time_duration;
             //ganton12
             //actual run
@@ -389,7 +391,10 @@ class RouterServiceClient {
                             CHECK(false, "Set count cannot exceed set ratio\n");
                         }
                     }
-
+                }
+               
+                if (responses_recvd->AtomicallyReadCount() % 50000 == 0){
+                  std::cout << "Responses: " << responses_recvd->AtomicallyReadCount() << "\n";
                 }
                 curr_time = (double)GetTimeInMicro();
             }
