@@ -320,7 +320,7 @@ class RouterServiceClient {
             key = std::get<0>(queries[query_id]);
             value = std::get<1>(queries[query_id]);
           
-            int operation = 1;
+            operation = 1;
             if (get_ratio >= set_ratio) {
                 get_cnt = (get_cnt + 1) % (get_ratio + 1);
             }
@@ -330,11 +330,11 @@ class RouterServiceClient {
             }
             center = 1000000.0/(double)(qps);
             std::poisson_distribution<int> distribution(center);
-            double next_time = distribution(generator) + curr_time;
+            next_time = distribution(generator) + curr_time;
           
             //ganton12
             //actual run
-            double start_time = (double)GetTimeInMicro();
+            double start_time_actual_run = (double)GetTimeInMicro();
             while (responses_recvd->AtomicallyReadCount() < overall_queries) 
             {
                 if (curr_time >= next_time && num_requests->AtomicallyReadCount() < overall_queries) {
@@ -397,7 +397,7 @@ class RouterServiceClient {
             achieved_qps = (float)responses_recvd->AtomicallyReadCount()/(float)time_duration;
             std::cout << "Target QPS: " << achieved_qps << "\n" ;
           
-            achieved_qps = (float)responses_recvd->AtomicallyReadCount()/(float)(((double)GetTimeInMicro() - start_time)/1000000);
+            achieved_qps = (float)responses_recvd->AtomicallyReadCount()/(float)(((double)GetTimeInMicro() - start_time_actual_run)/1000000);
             std::cout << "Actual QPS: " << achieved_qps << "\n";
           
             std::cout << "Requests: " << num_requests->AtomicallyReadCount() << "\n" ;
