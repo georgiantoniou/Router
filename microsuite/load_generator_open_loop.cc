@@ -331,7 +331,7 @@ class RouterServiceClient {
             center = 1000000.0/(double)(qps);
             std::poisson_distribution<int> distribution(center);
             next_time = distribution(generator) + curr_time;
-          
+            overall_queries = qps*time_duration;
             //ganton12
             //actual run
             double start_time_actual_run = (double)GetTimeInMicro();
