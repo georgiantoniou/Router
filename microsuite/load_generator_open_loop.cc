@@ -359,7 +359,7 @@ class RouterServiceClient {
                                 false,
                                 false);  
                     }
-                    next_time = distribution(generator) + curr_time;
+                    next_time = distribution(generator_run) + curr_time;
                     query_id = rand() % queries.size();
                     key = std::get<0>(queries[query_id]);
                     value = std::get<1>(queries[query_id]);
