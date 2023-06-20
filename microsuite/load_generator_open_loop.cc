@@ -317,6 +317,7 @@ class RouterServiceClient {
             std::cout << "Requests: " << num_requests->AtomicallyReadCount() << "\n" ;
             std::cout << "Responses: " << responses_recvd->AtomicallyReadCount() << "\n";
             std::cout << "!!!!!!!End of Warmup Period!!!!!!!" << " \n";
+            sleep(10);
           
           
             query_id = rand() % queries.size();
@@ -399,6 +400,7 @@ class RouterServiceClient {
                 curr_time = (double)GetTimeInMicro();
             }
 
+            std::cout << "!!! End of Actual Run !!!" << "\n" ;
             achieved_qps = (float)responses_recvd->AtomicallyReadCount()/(float)time_duration;
             std::cout << "Target QPS: " << achieved_qps << "\n" ;
           
